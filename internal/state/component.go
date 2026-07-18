@@ -17,12 +17,15 @@ type Component struct {
 }
 
 // NewComponent creates a new SSR component.
-func NewComponent(repository Repository) *Component {
+func NewComponent(repository Repository) (*Component, error) {
+	if repository == nil {
+		return nil, ErrRepositoryNil
+	}
 
 	return &Component{
 		repository: repository,
 		state:      runtime.LifecycleCreated,
-	}
+	}, nil
 }
 
 // Name returns the component identifier.

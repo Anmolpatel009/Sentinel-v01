@@ -14,5 +14,5 @@ var (
 
 	// ErrInvalidState indicates that an invalid state
 	// object was provided to the repository.
-	ErrInvalidState = errors.New("state: invalid state")
+	ErrNilState = errors.New("state: invalid state")
 )

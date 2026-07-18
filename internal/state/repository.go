@@ -1,77 +1,133 @@
+/* Responsibilities
+
+The Repository interface has exactly four responsibilities:
+
+Publish state into SSR.
+Retrieve the latest state from SSR.
+Hide the storage implementation.
+Remain stable across Sentinel v1, v2, and v3.
+
+It does not:
+
+Manage locks.
+Store data.
+Perform analysis.
+Validate state.
+
+Those belong elsewhere.*/ 
+
 package state
 
 import "context"
 
-// Repository defines the contract for Sentinel's
-// Shared State Repository (SSR).
+// Repository defines the Shared State Repository (SSR).
 //
-// The repository is the single source of truth
-// for all runtime state.
+// The SSR is the single source of truth for every runtime state
+// produced inside Sentinel.
 //
 // Implementations must be thread-safe.
 type Repository interface {
 
-	// Observation state
+	// -------------------------------------------------------------------------
+	// Observation
+	// -------------------------------------------------------------------------
 
-	// SetObservation stores the latest observation state.
-	SetObservation(ctx context.Context, state ObservationState) error
+	// PublishObservation atomically publishes a new observation snapshot.
+	PublishObservation(
+		ctx context.Context,
+		state *ObservationState,
+	) error
 
-	// GetObservation retrieves the latest observation state.
-	GetObservation(ctx context.Context) (ObservationState, error)
+	// CurrentObservation returns the latest published observation snapshot.
+	CurrentObservation(
+		ctx context.Context,
+	) (*ObservationState, error)
 
-	// Analysis state
+	// -------------------------------------------------------------------------
+	// Analysis
+	// -------------------------------------------------------------------------
 
-	// SetAnalysis stores analysis results.
-	SetAnalysis(ctx context.Context, state AnalysisState) error
+	PublishAnalysis(
+		ctx context.Context,
+		state *AnalysisState,
+	) error
 
-	// GetAnalysis retrieves analysis results.
-	GetAnalysis(ctx context.Context) (AnalysisState, error)
+	CurrentAnalysis(
+		ctx context.Context,
+	) (*AnalysisState, error)
 
-	// Decision state
+	// -------------------------------------------------------------------------
+	// Decision
+	// -------------------------------------------------------------------------
 
-	// SetDecision stores decision results.
-	SetDecision(ctx context.Context, state DecisionState) error
+	PublishDecision(
+		ctx context.Context,
+		state *DecisionState,
+	) error
 
-	// GetDecision retrieves decision results.
-	GetDecision(ctx context.Context) (DecisionState, error)
+	CurrentDecision(
+		ctx context.Context,
+	) (*DecisionState, error)
 
-	// Planner state
+	// -------------------------------------------------------------------------
+	// Planner
+	// -------------------------------------------------------------------------
 
-	// SetPlanner stores Adaptive Execution Strategy state.
-	SetPlanner(ctx context.Context, state PlannerState) error
+	PublishPlanner(
+		ctx context.Context,
+		state *PlannerState,
+	) error
 
-	// GetPlanner retrieves planner state.
-	GetPlanner(ctx context.Context) (PlannerState, error)
+	CurrentPlanner(
+		ctx context.Context,
+	) (*PlannerState, error)
 
-	// Backend state
+	// -------------------------------------------------------------------------
+	// Backend
+	// -------------------------------------------------------------------------
 
-	// SetBackend stores backend execution state.
-	SetBackend(ctx context.Context, state BackendState) error
+	PublishBackend(
+		ctx context.Context,
+		state *BackendState,
+	) error
 
-	// GetBackend retrieves backend execution state.
-	GetBackend(ctx context.Context) (BackendState, error)
+	CurrentBackend(
+		ctx context.Context,
+	) (*BackendState, error)
 
-	// Telemetry state
+	// -------------------------------------------------------------------------
+	// Telemetry
+	// -------------------------------------------------------------------------
 
-	// SetTelemetry stores telemetry information.
-	SetTelemetry(ctx context.Context, state TelemetryState) error
+	PublishTelemetry(
+		ctx context.Context,
+		state *TelemetryState,
+	) error
 
-	// GetTelemetry retrieves telemetry information.
-	GetTelemetry(ctx context.Context) (TelemetryState, error)
+	CurrentTelemetry(
+		ctx context.Context,
+	) (*TelemetryState, error)
 
-	// Reconciliation state
+	// -------------------------------------------------------------------------
+	// Reconciliation
+	// -------------------------------------------------------------------------
 
-	// SetReconciliation stores reconciliation information.
-	SetReconciliation(ctx context.Context, state ReconciliationState) error
+	PublishReconciliation(
+		ctx context.Context,
+		state *ReconciliationState,
+	) error
 
-	// GetReconciliation retrieves reconciliation information.
-	GetReconciliation(ctx context.Context) (ReconciliationState, error)
+	CurrentReconciliation(
+		ctx context.Context,
+	) (*ReconciliationState, error)
 
-	// Lifecycle
+	// -------------------------------------------------------------------------
+	// Store
+	// -------------------------------------------------------------------------
 
-	// Clear removes all stored state.
+	// Clear removes all runtime state.
 	Clear(ctx context.Context) error
 
-	// Health verifies repository availability.
+	// Health reports the health of the repository.
 	Health(ctx context.Context) error
 }
