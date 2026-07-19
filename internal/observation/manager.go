@@ -1,24 +1,20 @@
 /*
+	             Manager
+	                │
+	   Allocate ObservationState
+	                │
+	┌───────────────┼────────────────┐
+	▼               ▼                ▼
 
-Runtime
-    │
-    ▼
-Observation Component
-    │
-    ▼
-Observation Manager
-    │
-    ├──────── CPU Collector
-    ├──────── Memory Collector
-    ├──────── Network Collector
-    ├──────── Process Collector
-    ├──────── Filesystem Collector
-    │
-    ▼
-Publisher
-    │
-    ▼
-SSR
+CPU           Memory          Network
+
+	▼               ▼                ▼
+
+Process      Filesystem      (future...)
+
+	               │
+	               ▼
+	Repository.PublishObservation()
 */
 package observation
 
@@ -30,62 +26,78 @@ import (
 	"github.com/Anmolpatel009/Sentinel-v01/internal/observation/memory"
 	"github.com/Anmolpatel009/Sentinel-v01/internal/observation/network"
 	"github.com/Anmolpatel009/Sentinel-v01/internal/observation/process"
+	"github.com/Anmolpatel009/Sentinel-v01/internal/state"
 )
 
-// Manager coordinates one complete observation cycle.
+// Manager coordinates the Observation Engine.
+//
+// The Manager owns all built-in collectors, creates exactly one
+// ObservationState per observation cycle, invokes every collector,
+// and publishes the completed snapshot into the Shared State
+// Repository (SSR).
+//
+// Sentinel v1 intentionally owns the collectors directly because
+// there is only one implementation of each collector. Runtime
+// injection and collector interfaces are deferred until Sentinel v2.
 type Manager struct {
+	repository state.Repository
+
 	cpu        *cpu.Collector
 	memory     *memory.Collector
 	network    *network.Collector
 	process    *process.Collector
 	filesystem *filesystem.Collector
-
-	publisher *Publisher
 }
 
 // NewManager creates a new Observation Manager.
 func NewManager(
-	cpuCollector *cpu.Collector,
-	memoryCollector *memory.Collector,
-	networkCollector *network.Collector,
-	processCollector *process.Collector,
-	filesystemCollector *filesystem.Collector,
-	publisher *Publisher,
+	repository state.Repository,
 ) *Manager {
+
 	return &Manager{
-		cpu:        cpuCollector,
-		memory:     memoryCollector,
-		network:    networkCollector,
-		process:    processCollector,
-		filesystem: filesystemCollector,
-		publisher:  publisher,
+		repository: repository,
+
+		cpu:        cpu.NewCollector(),
+		memory:     memory.NewCollector(),
+		network:    network.NewCollector(),
+		process:    process.NewCollector(),
+		filesystem: filesystem.NewCollector(),
 	}
 }
 
-// Observe performs one complete observation cycle.
-func (m *Manager) Observe(ctx context.Context) error {
+// Collect executes one complete observation cycle.
+func (m *Manager) Collect(
+	ctx context.Context,
+) error {
 
-	snapshot := ObservationSnapshot{}
+	// Allocate exactly one snapshot for this observation cycle.
+	snapshot := &state.ObservationState{}
 
-	if err := m.cpu.Collect(ctx, &snapshot); err != nil {
+	// CPU
+	if err := m.cpu.Collect(ctx, snapshot); err != nil {
 		return err
 	}
 
-	if err := m.memory.Collect(ctx, &snapshot); err != nil {
+	// Memory
+	if err := m.memory.Collect(ctx, snapshot); err != nil {
 		return err
 	}
 
-	if err := m.network.Collect(ctx, &snapshot); err != nil {
+	// Network
+	if err := m.network.Collect(ctx, snapshot); err != nil {
 		return err
 	}
 
-	if err := m.process.Collect(ctx, &snapshot); err != nil {
+	// Process
+	if err := m.process.Collect(ctx, snapshot); err != nil {
 		return err
 	}
 
-	if err := m.filesystem.Collect(ctx, &snapshot); err != nil {
+	// Filesystem
+	if err := m.filesystem.Collect(ctx, snapshot); err != nil {
 		return err
 	}
 
-	return m.publisher.Publish(ctx, snapshot)
+	// Publish the completed snapshot atomically.
+	return m.repository.PublishObservation(ctx, snapshot)
 }

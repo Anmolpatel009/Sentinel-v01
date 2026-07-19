@@ -1,44 +1,25 @@
-/* Responsibilities
-
-The Repository interface has exactly four responsibilities:
-
-Publish state into SSR.
-Retrieve the latest state from SSR.
-Hide the storage implementation.
-Remain stable across Sentinel v1, v2, and v3.
-
-It does not:
-
-Manage locks.
-Store data.
-Perform analysis.
-Validate state.
-
-Those belong elsewhere.*/ 
-
 package state
 
 import "context"
 
 // Repository defines the Shared State Repository (SSR).
 //
-// The SSR is the single source of truth for every runtime state
-// produced inside Sentinel.
-//
-// Implementations must be thread-safe.
+// The SSR is the central in-memory state store shared by all
+// Sentinel engines. Each engine owns exactly one section of the
+// runtime state and publishes its latest result here.
 type Repository interface {
 
 	// -------------------------------------------------------------------------
 	// Observation
 	// -------------------------------------------------------------------------
 
-	// PublishObservation atomically publishes a new observation snapshot.
+	// PublishObservation stores the latest observation snapshot.
 	PublishObservation(
 		ctx context.Context,
 		state *ObservationState,
 	) error
 
-	// CurrentObservation returns the latest published observation snapshot.
+	// CurrentObservation returns the latest observation snapshot.
 	CurrentObservation(
 		ctx context.Context,
 	) (*ObservationState, error)
@@ -47,87 +28,79 @@ type Repository interface {
 	// Analysis
 	// -------------------------------------------------------------------------
 
-	PublishAnalysis(
+	Analysis(
 		ctx context.Context,
-		state *AnalysisState,
-	) error
-
-	CurrentAnalysis(
-		ctx context.Context,
-	) (*AnalysisState, error)
+	) (AnalysisState, error)
 
 	// -------------------------------------------------------------------------
 	// Decision
 	// -------------------------------------------------------------------------
 
-	PublishDecision(
+	Decision(
 		ctx context.Context,
-		state *DecisionState,
-	) error
-
-	CurrentDecision(
-		ctx context.Context,
-	) (*DecisionState, error)
+	) (DecisionState, error)
 
 	// -------------------------------------------------------------------------
 	// Planner
 	// -------------------------------------------------------------------------
 
-	PublishPlanner(
+	SetPlanner(
 		ctx context.Context,
-		state *PlannerState,
+		state PlannerState,
 	) error
 
-	CurrentPlanner(
+	Planner(
 		ctx context.Context,
-	) (*PlannerState, error)
+	) (PlannerState, error)
 
 	// -------------------------------------------------------------------------
 	// Backend
 	// -------------------------------------------------------------------------
 
-	PublishBackend(
+	SetBackend(
 		ctx context.Context,
-		state *BackendState,
+		state BackendState,
 	) error
 
-	CurrentBackend(
+	Backend(
 		ctx context.Context,
-	) (*BackendState, error)
+	) (BackendState, error)
 
 	// -------------------------------------------------------------------------
 	// Telemetry
 	// -------------------------------------------------------------------------
 
-	PublishTelemetry(
+	SetTelemetry(
 		ctx context.Context,
-		state *TelemetryState,
+		state TelemetryState,
 	) error
 
-	CurrentTelemetry(
+	Telemetry(
 		ctx context.Context,
-	) (*TelemetryState, error)
+	) (TelemetryState, error)
 
 	// -------------------------------------------------------------------------
 	// Reconciliation
 	// -------------------------------------------------------------------------
 
-	PublishReconciliation(
+	SetReconciliation(
 		ctx context.Context,
-		state *ReconciliationState,
+		state ReconciliationState,
 	) error
 
-	CurrentReconciliation(
+	Reconciliation(
 		ctx context.Context,
-	) (*ReconciliationState, error)
+	) (ReconciliationState, error)
 
 	// -------------------------------------------------------------------------
-	// Store
+	// Lifecycle
 	// -------------------------------------------------------------------------
 
-	// Clear removes all runtime state.
-	Clear(ctx context.Context) error
+	Clear(
+		ctx context.Context,
+	) error
 
-	// Health reports the health of the repository.
-	Health(ctx context.Context) error
+	Health(
+		ctx context.Context,
+	) error
 }
